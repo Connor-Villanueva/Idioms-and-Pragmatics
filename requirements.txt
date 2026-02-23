@@ -2,3 +2,5 @@ ipykernel
 nltk
 syllables
 svgling
+pandas
+duckdb
