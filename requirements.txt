@@ -1,0 +1,4 @@
+ipykernel
+nltk
+syllables
+svgling
