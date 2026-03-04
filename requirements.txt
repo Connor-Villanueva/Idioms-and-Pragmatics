@@ -4,3 +4,4 @@ syllables
 svgling
 pandas
 duckdb
+fastparquet
