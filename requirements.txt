@@ -5,3 +5,4 @@ svgling
 pandas
 duckdb
 fastparquet
+spacy
