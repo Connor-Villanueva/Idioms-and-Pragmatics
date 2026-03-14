@@ -6,3 +6,4 @@ pandas
 duckdb
 fastparquet
 spacy
+rapidfuzz
