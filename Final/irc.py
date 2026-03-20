@@ -11,7 +11,11 @@ DEFAULT_NICKNAME = "JTC-Idiom-Bot"
 
 # These can change for a better description
 WHO_AM_I = f"{DEFAULT_NICKNAME} Jazzy De Los Santos, Timothy Matthies, Connor Villanueva CSC482-03"
-USAGE_MSG_2 = "second line that explains what special abilities the bot has, including the special question (phase III) and an example of how to ask that question"
+USAGE_MSG_2 = ["Ask us about idioms. We can answer questions such as: ",
+"\'What is the idiom in: \"___\"\'",
+"\'What does \"___\" mean\'",
+"\'Replace the idioms in this sentence with their definition: \"___\"\'",
+"Note: that quotes are needed around sentences with idioms."]
 
 
 '''

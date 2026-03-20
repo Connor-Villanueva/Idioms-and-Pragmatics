@@ -7,13 +7,13 @@ import re
 from rapidfuzz import fuzz
 import duckdb as dd
 import os
+import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../Data/idiom_repository_all.parquet"))
 
 class Idioms():
     def __init__(self):
-        nltk.download('brown')
         self.idiom_df = dd.query(f"""
             SELECT definition, CAST(variations AS VARCHAR[]) || [idiom] AS all_variations
             FROM read_parquet('{DATA_PATH}')
@@ -75,10 +75,39 @@ class Idioms():
                     "end": span.end_char,
                 })
         return results
+    
+    def llm_fix_grammar(self, sentence, idiom_matches):
+        for match in idiom_matches:
+            idiom = match["text"]
+            definition = match["definition"]
+
+            prompt = f"""
+            Original sentence: "{sentence}"
+            Replace the phrase "{idiom}" with the definition "{definition}".
+            Rewrite the sentence so that it is grammatically perfect and natural.
+            Do not edit the non-idiom part unless it is for grammar.
+            Only return the corrected sentence. No explanation.
+            """
+
+            res = requests.post("http://localhost:11434/api/generate",
+                                    json={
+                                        "model": "llama3",
+                                        "prompt": prompt,
+                                        "stream": False
+                                    })
+            if (res.status_code == 200):
+                sentence = res.json()["response"].strip()
+            
+        return sentence
 
     def replace_idioms_with_definitions(self, text: str) -> str:
         matches = self.find_idiom_matches(text)
 
+        res = self.llm_fix_grammar(text, matches)
+
+        if (res != text):
+            return res
+        
         for match in reversed(matches):
             text = text[:match["start"]] + match["definition"] + text[match["end"]:]
         return text
@@ -113,6 +142,7 @@ class Idioms():
             output = re.search(r"^.*[Rr]eplace the idioms in this sentence with their definition: (\"(.*?)\"[.?]?)", input)
             sentence = output.group(1)
             replaced_sentence = self.replace_idioms_with_definitions(sentence)
+            replaced_sentence.replace("\"","")
             return f'Here\'s my best guess to replace your sentence: "{replaced_sentence}"'
         else:
             return "Yeah, I don't really get that. Maybe you can try asking me a question about an idiom?"

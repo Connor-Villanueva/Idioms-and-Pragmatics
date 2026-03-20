@@ -92,7 +92,9 @@ def handle_specific_msg(sender: str, specific_msg: str):
     if "usage" in words or "who are you?" in words:
         print("Received proper 'usage' command")
         irc.send(f"{WHO_AM_I}", sender)
-        irc.send(f"{USAGE_MSG_2}", sender)
+        
+        for line in USAGE_MSG_2:
+            irc.send(f"{line}", sender)
         handled = True
 
     if "users" in words:
