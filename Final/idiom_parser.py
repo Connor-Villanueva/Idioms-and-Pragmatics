@@ -2,6 +2,7 @@ import spacy
 from spacy.util import filter_spans
 from spacy.matcher import PhraseMatcher
 import nltk
+from nltk.corpus import brown
 import re
 from rapidfuzz import fuzz
 import duckdb as dd
@@ -12,6 +13,7 @@ DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../Data/idiom_repository_all
 
 class Idioms():
     def __init__(self):
+        nltk.download('brown')
         self.idiom_df = dd.query(f"""
             SELECT definition, CAST(variations AS VARCHAR[]) || [idiom] AS all_variations
             FROM read_parquet('{DATA_PATH}')

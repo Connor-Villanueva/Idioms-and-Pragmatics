@@ -7,3 +7,4 @@ duckdb
 fastparquet
 spacy
 rapidfuzz
+transformers

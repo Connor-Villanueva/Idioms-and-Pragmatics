@@ -82,29 +82,31 @@ def handle_specific_msg(sender: str, specific_msg: str):
     msg_cleaned = msg_only.strip().lower()
     handled = False
 
-    if "hi" in msg_cleaned or "hello" in msg_cleaned:
+    words = nltk.word_tokenize(msg_cleaned)
+
+    if "hi" in words or "hello" in words:
         print("Received proper greeting command")
         irc.send("Hey!", sender)
         handled = True
 
-    if "usage" in msg_cleaned or "who are you?" in msg_cleaned:
+    if "usage" in words or "who are you?" in words:
         print("Received proper 'usage' command")
         irc.send(f"{WHO_AM_I}", sender)
         irc.send(f"{USAGE_MSG_2}", sender)
         handled = True
 
-    if "users" in msg_cleaned:
+    if "users" in words:
         print("Received proper 'users' command")
         irc.send(f"{active_users}", sender)
         handled = True
 
     # to be updated
-    if "forget" in msg_cleaned:
+    if "forget" in words:
         print("Received proper 'forget' command")
         active_users = []
         irc.send("Forgetting everything...", sender)
         handled = True
-    if "die" in msg_cleaned:
+    if "die" in words:
         print("Received proper 'die' command")
         irc.send("really? ok", sender)
         irc.command("QUIT")
