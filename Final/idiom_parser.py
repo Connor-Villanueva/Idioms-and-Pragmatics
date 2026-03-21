@@ -10,12 +10,12 @@ import os
 import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../Data/idiom_repository_all.parquet"))
+DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../Data/idiom_repository_final.parquet"))
 
 class Idioms():
     def __init__(self):
         self.idiom_df = dd.query(f"""
-            SELECT definition, CAST(variations AS VARCHAR[]) || [idiom] AS all_variations
+            SELECT definition, CAST(variations AS VARCHAR[]) || [idiom] AS all_variations, replacement
             FROM read_parquet('{DATA_PATH}')
         """).df()
 
@@ -29,7 +29,7 @@ class Idioms():
         for _, row in self.idiom_df.iterrows():
             for phrase in row["all_variations"]:
                 # if we make a column that has generic replacements, we can use that instead of definitions
-                self.phrase_to_definition[self.normalize(phrase)] = row["definition"]
+                self.phrase_to_definition[self.normalize(phrase)] = row["definition"] if type(row["definition"]) != float else row["replacement"]
 
     def pick_out_idioms(self, input: str) -> list[tuple[str, int, int]]:
         doc = self.nlp(input)
@@ -76,6 +76,34 @@ class Idioms():
                 })
         return results
     
+    def reduce_single_present_tense(self, sentence: str):
+        sentence = sentence.replace('"', '')
+        doc = self.nlp(sentence)
+
+        new_tokens = []
+
+        for token in doc:
+            if (token.pos_ == "VERB" or token.pos_ == "AUX"):
+
+                if (token.tag_ in ["VBD", "VBG", "VBN", "VBP"]):
+                    new_tokens.append(token.lemma_ if token.lemma_ != "be" else "is")
+                else:
+                    new_tokens.append(token.text)
+
+            elif (token.pos_ == "NOUN"):
+                new_tokens.append(token.lemma_)
+
+            else:
+                new_tokens.append(token.text)
+        res = " ".join(new_tokens)
+
+        res = re.sub(r' \'', r"'", res)
+        res = re.sub(r' \.', r'.', res)
+        res = re.sub(r' - ', r'-', res)
+        res = re.sub(r' , ', r', ', res)
+        
+        return res
+    
     def llm_fix_grammar(self, sentence, idiom_matches):
         for match in idiom_matches:
             idiom = match["text"]
@@ -85,6 +113,7 @@ class Idioms():
             Original sentence: "{sentence}"
             Replace the phrase "{idiom}" with the definition "{definition}".
             Rewrite the sentence so that it is grammatically perfect and natural.
+            You may correct punctuation and capitalization in the definition.
             Do not edit the non-idiom part unless it is for grammar.
             Only return the corrected sentence. No explanation.
             """
@@ -95,6 +124,8 @@ class Idioms():
                                         "prompt": prompt,
                                         "stream": False
                                     })
+            
+            print(f"LLM Status Code: {res.status_code}")
             if (res.status_code == 200):
                 sentence = res.json()["response"].strip()
             
@@ -103,20 +134,63 @@ class Idioms():
     def replace_idioms_with_definitions(self, text: str) -> str:
         matches = self.find_idiom_matches(text)
 
-        res = self.llm_fix_grammar(text, matches)
+        if (len(matches) > 0):
+            res = self.llm_fix_grammar(text, matches)
 
-        if (res != text):
-            return res
+            if (res != text):
+                print("LLM Generated Sentence")
+                return res
+            
+            print("No LLM Response. Replacing normally...")
+            for match in reversed(matches):
+                text = text[:match["start"]] + match["definition"] + text[match["end"]:]
+            return text
+    
+        return None
+    
+    def fix_response_input(self, sentence: str):
+        try:
+            question, idiom_sent = sentence.split(":")
+
+            idiom_sent = idiom_sent.replace('"', "")
+            cleaned_sent = self.reduce_single_present_tense(idiom_sent)
+            cleaned_input = question + ': "' + cleaned_sent.strip() + '"'
+
+            matches = self.pick_out_idioms(cleaned_input)
+
+            tokens = nltk.word_tokenize(sentence)
+            for match in matches:
+                idiom, start, end = match
+
+                idiom_tokens = nltk.word_tokenize(idiom)
+
+                for i, j in enumerate(range(start, end)):
+                    tokens[j] = idiom_tokens[i]
+                
+            sentence = " ".join(tokens)
+            sentence = re.sub(r' ``', r'', sentence)
+            sentence = re.sub(r' \'\'', r'', sentence)
+
+            question, idiom_sent = sentence.split(":")
+
+            # cleaned_sent = self.reduce_single_present_tense(idiom_sent)
+            cleaned_input = question.strip() + ': "' + idiom_sent.strip() + '"'
+
+            return cleaned_input
+
+        except Exception as e:
+            return None
         
-        for match in reversed(matches):
-            text = text[:match["start"]] + match["definition"] + text[match["end"]:]
-        return text
-
     def respond(self, input: str) -> str:
+        cleaned_input = self.fix_response_input(input)
+
+        if (cleaned_input is None):
+            cleaned_input = input
+
         if re.fullmatch(r"^.*[Dd]o you love me[.?]?", input):
             return "No, I only love idioms and you'll never be them."
-        elif re.fullmatch(r"^.*[Ww]hat does (?:the idiom )?([\"]?.*?[\"]?) mean[.?]?", input):
-            output = re.search(r"^.*[Ww]hat does (?:the idiom )?\"(.*?)\" mean[.?]?", input)
+        elif re.fullmatch(r"^.*[Ww]hat does (?:the idiom )?([\"]?.*?[\"]?) mean[.?]?", cleaned_input):
+            output = re.search(r"^.*[Ww]hat does (?:the idiom )?\"(.*?)\" mean[.?]?", cleaned_input)
             # Query idiom db and get the definition
             idiom = output.group(1)
             definition = self.find_best_definition(idiom)
@@ -124,8 +198,8 @@ class Idioms():
                 return "Hmm. I'm kind of stumped on that one. I guess try a different one."
             else:
                 return f"Yeah, that means: {definition}."
-        elif re.fullmatch(r"^.*[Ww]hat (?:are|is) the idiom(?:s)? in: ([\"]?.*?[\"]?[.?]?)", input):
-            output = re.search(r"^.*[Ww]hat (?:are|is) the idiom(?:s)? in: (\"(.*?)\"[.?]?)", input)
+        elif re.fullmatch(r"^.*[Ww]hat (?:are|is) the idiom(?:s)? in: ([\"]?.*?[\"]?[.?]?)", cleaned_input):
+            output = re.search(r"^.*[Ww]hat (?:are|is) the idiom(?:s)? in: (\"(.*?)\"[.?]?)", cleaned_input)
             sentence = output.group(1)
             list_of_idioms = [x[0] for x in self.pick_out_idioms(sentence)]
             if len(list_of_idioms) != 0:
@@ -138,11 +212,13 @@ class Idioms():
                 return response
             else:
                 return "Sorry, I couldn't find any idioms in that sentence."
-        elif re.fullmatch(r"^.*[Rr]eplace the idioms in this sentence with their definition: ([\"]?.*?[\"]?[.?]?)", input):
-            output = re.search(r"^.*[Rr]eplace the idioms in this sentence with their definition: (\"(.*?)\"[.?]?)", input)
+        elif re.fullmatch(r"^.*[Rr]eplace the idioms in this sentence with their definition: ([\"]?.*?[\"]?[.?]?)", cleaned_input):
+            output = re.search(r"^.*[Rr]eplace the idioms in this sentence with their definition: (\"(.*?)\"[.?]?)", cleaned_input)
             sentence = output.group(1)
             replaced_sentence = self.replace_idioms_with_definitions(sentence)
-            replaced_sentence.replace("\"","")
-            return f'Here\'s my best guess to replace your sentence: "{replaced_sentence}"'
+
+            if (replaced_sentence is None):
+                return f'I don\'t quite understand the idiom in the sentence: {input.split(":")[1]}'
+            return f'Here\'s my best guess to replace your sentence: {replaced_sentence}'
         else:
             return "Yeah, I don't really get that. Maybe you can try asking me a question about an idiom?"

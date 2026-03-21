@@ -1266,7 +1266,11 @@
     "sources": [
       "Wiktionary"
     ],
-    "entry": [],
+    "entry": [
+      {
+        "definition": "a fervent wish that something should not happen"
+      }
+    ],
     "id": 60,
     "confidence": 1
   },
@@ -1276,7 +1280,11 @@
     "sources": [
       "Wiktionary"
     ],
-    "entry": [],
+    "entry": [
+      {
+        "definition": "a fervent wish that something should not happen"
+    }
+    ],
     "id": 61,
     "confidence": 1
   },
@@ -1597,7 +1605,11 @@
     "sources": [
       "Wiktionary"
     ],
-    "entry": [],
+    "entry": [
+      {
+        "definition": "extreme surprise"
+      }
+    ],
     "id": 78,
     "confidence": 1
   },
@@ -1706,7 +1718,11 @@
     "sources": [
       "Wiktionary"
     ],
-    "entry": [],
+    "entry": [
+      {
+        "definition": "I would agree"
+      }
+    ],
     "id": 84,
     "confidence": 1
   },
@@ -1716,7 +1732,11 @@
     "sources": [
       "Wiktionary"
     ],
-    "entry": [],
+    "entry": [
+      {
+        "definition": "I am surprised"
+      }
+    ],
     "id": 85,
     "confidence": 1
   },
@@ -175069,7 +175089,7 @@
     "confidence": 1
   },
   {
-    "variations": [],
+    "variations": ["look to your laurels"],
     "idiom": "look to your laurels",
     "sources": [
       "Oxford Dictionary of Idioms"
@@ -175111,7 +175131,7 @@
     "confidence": 1
   },
   {
-    "variations": [],
+    "variations": ["have your name in light"],
     "idiom": "have your name in lights",
     "sources": [
       "Oxford Dictionary of Idioms"
@@ -175191,7 +175211,7 @@
     "confidence": 1
   },
   {
-    "variations": [],
+    "variations": ["get your just desert"],
     "idiom": "get your just deserts",
     "sources": [
       "Oxford Dictionary of Idioms"
@@ -175301,7 +175321,7 @@
     "confidence": 1
   },
   {
-    "variations": [],
+    "variations": ["cover your track"],
     "idiom": "cover your tracks",
     "sources": [
       "Oxford Dictionary of Idioms"
@@ -175431,7 +175451,7 @@
     "confidence": 1
   },
   {
-    "variations": [],
+    "variations": ["spill the bean"],
     "idiom": "spill the beans",
     "sources": [
       "Oxford Dictionary of Idioms"

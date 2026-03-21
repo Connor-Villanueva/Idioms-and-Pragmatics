@@ -1,0 +1,7 @@
+nltk
+pandas
+duckdb
+fastparquet
+spacy
+rapidfuzz
+transformers
