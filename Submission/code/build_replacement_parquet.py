@@ -1,11 +1,12 @@
 import re
 from difflib import SequenceMatcher
+from idiom_parser import *
 
 import duckdb
 
 
-SOURCE_PATH = "final-project/Data/idiom_repository_all.parquet"
-OUTPUT_PATH = "final-project/Data/idiom_repository_replaced.parquet"
+SOURCE_PATH = "../data/idiom_repository_all.parquet"
+OUTPUT_PATH = "../data/idiom_repository_replaced.parquet"
 
 MISSING_REPLACEMENT = "an expression with no source definition available"
 
@@ -487,6 +488,41 @@ def build_replacements(rows: list[dict]) -> list[str]:
 
     return [resolve(index, set()) for index in range(len(rows))]
 
+def addCanonicalVariation():
+    query = f"""
+        CREATE TABLE
+            idioms
+        AS (
+            SELECT *
+            FROM '{SOURCE_PATH}'
+        )
+    """
+
+    duckdb.query(query)
+
+    df = duckdb.query("SELECT * FROM idioms").df()
+
+    IdiomParser = Idioms()
+
+    for _, row in df.iterrows():
+        idiom = row["idiom"]
+        variations = list(row["variations"])
+
+        singular_idiom = IdiomParser.reduce_single_present_tense(idiom)
+
+        if (idiom.lower() != singular_idiom.lower()):
+            query = f"""
+                UPDATE
+                    idioms
+                SET
+                    variations = ?
+                WHERE
+                    idiom = ?
+            """
+            duckdb.query(query, params=[variations + [singular_idiom], idiom])
+
+    duckdb.query(f"COPY (SELECT * FROM idioms) TO '{OUTPUT_PATH}' (FORMAT parquet)")
+
 
 def main() -> None:
     con = duckdb.connect()
@@ -502,6 +538,8 @@ def main() -> None:
         (FORMAT PARQUET)
         """
     )
+
+    addCanonicalVariation()
 
     print(f"Wrote {len(df)} rows to {OUTPUT_PATH}")
 
