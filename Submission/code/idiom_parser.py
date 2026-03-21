@@ -10,7 +10,8 @@ import os
 import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../Data/idiom_repository_final.parquet"))
+DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../data/idiom_repository_final.parquet"))
+DEFAULT_LLM_PORT = 11434
 
 class Idioms():
     def __init__(self):
@@ -118,7 +119,7 @@ class Idioms():
             Only return the corrected sentence. No explanation.
             """
 
-            res = requests.post("http://localhost:11434/api/generate",
+            res = requests.post(f"http://localhost:{DEFAULT_LLM_PORT}/api/generate",
                                     json={
                                         "model": "llama3",
                                         "prompt": prompt,

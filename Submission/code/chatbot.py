@@ -3,9 +3,7 @@ from util import *
 from idiom_parser import *
 
 active_users = []
-
-irc = IRC()
-irc.connect()
+irc : IRC = IRC()
 idioms = Idioms()
 
 '''
@@ -121,19 +119,47 @@ def handle_specific_msg(sender: str, specific_msg: str):
         print(f"Responding with: '{response}'")
         irc.send(response, sender)
 
-while (True):
-    try:
-        res = irc.get_response()
+def main(channel: str = None):
+    if (channel is None):
+        irc.connect()
+    else:
+        irc.connect(channel=channel)
 
-        res = parse_txt(res)
-
-        if (res):
-            print(res)
-            sender, msg = handle_privmsg(*res)
-
-            handle_specific_msg(sender, msg)
-
+    print(f"Sucessfully connected to {irc.channels[0]}")
     
-    except Exception as e:
-        print(e)
-        continue
+    while (True):
+        try:
+            res = irc.get_response()
+
+            res = parse_txt(res)
+
+            if (res):
+                print(res)
+                sender, msg = handle_privmsg(*res)
+
+                handle_specific_msg(sender, msg)
+
+        
+        except Exception as e:
+            print(e)
+            continue
+
+if __name__ == "__main__":
+    if (len(sys.argv) > 1):
+        try:
+            _, channelFlag, channel = sys.argv
+
+            if ("--channel" not in channelFlag):
+                raise Exception
+
+            if (channel[0] != "#"):
+                print("Channel name must start with #")
+                sys.exit(1)
+            
+            main(channel=channel)
+
+        except Exception as e:
+            print("Usage: python3 chatbot.py --channel [channel]")
+            sys.exit(1)
+    else:
+        main()
